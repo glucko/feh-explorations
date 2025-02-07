@@ -1,4 +1,8 @@
+# Firmware
+
 # Prerequisites
+fehproteusfirmware/
+
 *.d
 
 # Object files
@@ -50,3 +54,9 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+Proteus.txt
+.DS_Store
+NUL
+Proteus.files
+Proteus.includes
+Proteus.s19
