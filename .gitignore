@@ -1,8 +1,7 @@
 # Firmware
-
-# Prerequisites
 fehproteusfirmware/
 
+# Prerequisites
 *.d
 
 # Object files
