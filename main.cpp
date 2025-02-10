@@ -18,19 +18,27 @@ DigitalInputPin backLeft(FEHIO::P1_3);
 FEHMotor leftMotor(FEHMotor::Motor0, 9);
 FEHMotor rightMotor(FEHMotor::Motor2, 9);
 
+#define forward 25
+#define backward -25
+
 // FEHServo servo(FEHServo::Servo0);
 
 void correction()
 {
-    while(!backRight.Value() && backLeft.Value()){
-        leftMotor.SetPercent(0);
-        rightMotor.SetPercent(25);
-    }
-    while(backRight.Value() && !backLeft.Value()){
-        leftMotor.SetPercent(25);
+    if(!backRight.Value() && backLeft.Value()){ //Right one has hit but left hasn't
+        LCD.Write("Right one hit, left not");
+        leftMotor.SetPercent(backward);
         rightMotor.SetPercent(0);
     }
-    
+    if(backRight.Value() && !backLeft.Value()){ //Right one hasn't hit but left one has
+        LCD.Write("Left one hit, right not");
+        leftMotor.SetPercent(0);
+        rightMotor.SetPercent(backward);
+    }
+    while(backRight.Value() || backLeft.Value())
+    {
+        //Looping while at least one switch isn't clicked
+    }
     leftMotor.SetPercent(0);
     rightMotor.SetPercent(0);
 }
@@ -39,13 +47,16 @@ void turn(int dir)
 {
     if (dir == LEFT)
     {
-        rightMotor.SetPercent(25);
+        rightMotor.SetPercent(forward);
+        LCD.Write("Turning left");
     } else{
-        leftMotor.SetPercent(25);
-
+        leftMotor.SetPercent(forward);
+        LCD.Write("Turning right");
     }
 
-    while(!backRight.Value() || !backLeft.Value()) {}
+    while(!backRight.Value() || !backLeft.Value()) {
+        //Loops until a bump switch is hit
+    }
 
     leftMotor.SetPercent(0);
     rightMotor.SetPercent(0);
@@ -55,8 +66,8 @@ void turn(int dir)
 
 void driveUntilHit()
 {
-    leftMotor.SetPercent(-25);
-    rightMotor.SetPercent(-25);
+    leftMotor.SetPercent(forward);
+    rightMotor.SetPercent(forward);
 
     while(frontLeft.Value() || frontRight.Value()) {}
 
