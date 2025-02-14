@@ -9,6 +9,9 @@
 #define FORWARD 25
 #define BACKWARD 25
 
+#define SENSOR_THRESHOLD 1.5
+#define TURN_ADJUSTMENT 5
+
 using namespace std;
 
 AnalogInputPin leftSensor(FEHIO::P0_0);
@@ -34,31 +37,31 @@ void lineFollowing()
             leftMotor.SetPercent(FORWARD);
             rightMotor.SetPercent(FORWARD);
 
-            if (rightSensor.Value() < 1.5) {
+            if (rightSensor.Value() < SENSOR_THRESHOLD) {
                 state = RIGHT;
             } 
 
-            if (leftSensor.Value() < 1.5) {
+            if (leftSensor.Value() < SENSOR_THRESHOLD) {
                 state = LEFT;
             }
             break; 
 
         case RIGHT:
             leftMotor.SetPercent(FORWARD);
-            rightMotor.SetPercent(FORWARD + 5);
+            rightMotor.SetPercent(FORWARD + TURN_ADJUSTMENT);
             
             // when right is no longer triggered
-            if(rightSensor.Value() > 1.5){ 
+            if(rightSensor.Value() > SENSOR_THRESHOLD){ 
                 state = MIDDLE;
             }
             break; 
 
         case LEFT:
-            leftMotor.SetPercent(FORWARD + 5);
+            leftMotor.SetPercent(FORWARD + TURN_ADJUSTMENT);
             rightMotor.SetPercent(FORWARD);
             
             // when left is no longer triggered
-            if(leftSensor.Value() > 1.5){ 
+            if(leftSensor.Value() > SENSOR_THRESHOLD){ 
                 state = MIDDLE;
             }
             break; 
