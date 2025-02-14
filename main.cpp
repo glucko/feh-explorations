@@ -3,9 +3,6 @@
 #include <FEHUtility.h>
 #include <FEHMotor.h>
 #include <string>
-#include "FEHFile.h"
-#include "FEHSD.h"
-
 #define FORWARD 25
 #define BACKWARD 25
 
@@ -82,15 +79,15 @@ void waitUntilTouch()
     while(LCD.Touch(&left, &right)) {}
 }
 
-void log(string message)
-{
+// void log(string message)
+// {
 
-    FEHFile *ofptr = SD.FOpen("Output.txt", "w");
+//     FEHFile *ofptr = SD.FOpen("Output.txt", "w");
 
-    SD.FPrintf(ofptr, message.c_str());
+//     SD.FPrintf(ofptr, message.c_str());
 
-    SD.FClose(ofptr);
-}
+//     SD.FClose(ofptr);
+// }
 
 int main()
 {
