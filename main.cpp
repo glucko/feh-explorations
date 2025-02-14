@@ -1,109 +1,295 @@
 #include <FEHLCD.h>
+
 #include <FEHIO.h>
+
 #include <FEHUtility.h>
+
 #include <FEHMotor.h>
+
 #include <FEHServo.h>
+
 #include <FEHAccel.h>
 
-#define LEFT 1
-#define RIGHT -1
+ 
 
-AnalogInputPin lightSensor(FEHIO::P0_0);
+#define FRONT 0
 
-DigitalInputPin frontRight(FEHIO::P1_0);
-DigitalInputPin backRight(FEHIO::P1_1);
+#define RIGHT 1
+
+#define BACK 2
+
+#define LEFT 3
+
+ 
+
+//AnalogInputPin lightSensor(FEHIO::P0:0);
+
+ 
+
+DigitalInputPin frontRight(FEHIO::P1_1);
+
+DigitalInputPin backRight(FEHIO::P1_0);
+
 DigitalInputPin frontLeft(FEHIO::P1_2);
-DigitalInputPin backLeft(FEHIO::P1_3);
+
+DigitalInputPin backLeft(FEHIO::P3_0);
+
+ 
 
 FEHMotor leftMotor(FEHMotor::Motor0, 9);
+
 FEHMotor rightMotor(FEHMotor::Motor2, 9);
 
+ 
+
 #define forward 25
+
 #define backward -25
+
+ 
 
 // FEHServo servo(FEHServo::Servo0);
 
-void correction()
-{
-    if(!backRight.Value() && backLeft.Value()){ //Right one has hit but left hasn't
-        LCD.Write("Right one hit, left not");
-        leftMotor.SetPercent(backward);
-        rightMotor.SetPercent(0);
-    }
-    if(backRight.Value() && !backLeft.Value()){ //Right one hasn't hit but left one has
-        LCD.Write("Left one hit, right not");
-        leftMotor.SetPercent(0);
-        rightMotor.SetPercent(backward);
-    }
-    while(backRight.Value() || backLeft.Value())
-    {
-        //Looping while at least one switch isn't clicked
-    }
-    leftMotor.SetPercent(0);
-    rightMotor.SetPercent(0);
-}
+ 
+
+//Assumes that person is inputting either LEFT or RIGHT
 
 void turn(int dir)
+
 {
-    if (dir == LEFT)
+
+    if(dir == LEFT)
+
     {
-        rightMotor.SetPercent(forward);
-        LCD.Write("Turning left");
-    } else{
-        leftMotor.SetPercent(forward);
-        LCD.Write("Turning right");
+
+        leftMotor.SetPercent(backward);
+
     }
 
-    while(!backRight.Value() || !backLeft.Value()) {
-        //Loops until a bump switch is hit
+    else
+
+    {
+
+        rightMotor.SetPercent(backward);
+
+    }
+
+    while(backRight.Value() && backLeft.Value()) //While neither has been hit
+
+    {
+
+        Sleep(0.1);
+
     }
 
     leftMotor.SetPercent(0);
+
     rightMotor.SetPercent(0);
 
-    correction();
 }
 
-void driveUntilHit()
+ 
+
+bool hitSideWithOne(int dir)
+
 {
+
+    if(dir == FRONT)
+
+    {
+
+        return !(frontRight.Value() && frontLeft.Value()); //Returns 1 if either is hit
+
+    }
+
+    else
+
+    {
+
+        return !(backRight.Value() && backLeft.Value()); //Returns 1 if either is hit
+
+    }
+
+}
+
+ 
+
+bool flushWithWall(int dir)
+
+{
+
+    if(dir == FRONT)
+
+    {
+
+        return !(frontRight.Value() || frontLeft.Value()); //Returns 1 if both are hit
+
+    }
+
+    else
+
+    {
+
+        return !(backRight.Value() || backLeft.Value()); //Returns 1 if both are hit
+
+    }
+
+}
+
+ 
+
+void correction(int dir)
+
+{
+
+    if(dir == FRONT)
+
+    {
+
+        if(frontRight.Value()) //Front right is not touching wall
+
+        {
+
+            rightMotor.SetPercent(forward);
+
+        }
+
+        else //Front left is not touching wall
+
+        {
+
+            leftMotor.SetPercent(forward);
+
+        }
+
+    }
+
+    else
+
+    {
+
+        if(backRight.Value()) //Back right is not touching wall
+
+        {
+
+            rightMotor.SetPercent(backward);
+
+        }
+
+        else //Back left is not touching wall
+
+        {
+
+            leftMotor.SetPercent(backward);
+
+        }
+
+    }
+
+    while(!flushWithWall(dir))
+
+    {
+
+        Sleep(0.1);
+
+    }
+
+}
+
+ 
+
+void driveForwardUntilHit()
+
+{
+
     leftMotor.SetPercent(forward);
+
     rightMotor.SetPercent(forward);
 
-    while(frontLeft.Value() || frontRight.Value()) {}
+    while(!hitSideWithOne(FRONT))
+
+    {
+
+        Sleep(0.1);
+
+    }
 
     leftMotor.SetPercent(0);
+
     rightMotor.SetPercent(0);
+
 }
 
+ 
+
 // void controlServo()
+
 // {
+
 //     double servoCoefficient = 180.0/3.3;
+
 //     servo.SetDegree(lightSensor.Value() * servoCoefficient);
+
 // }
 
+ 
 
 int main()
+
 {
+
     // servo.SetMax(2500);
+
     // servo.SetMin(500);
 
+ 
+
     // while(true)
+
     // {
+
     //     controlServo();
+
     // }
 
+ 
+
     float left;
+
     float right;
+
+ 
 
     while(!LCD.Touch(&left, &right)) {}
 
+ 
+
     while(LCD.Touch(&left, &right)) {}
-    
-    driveUntilHit();
+
+   
+    LCD.Write("Driving Forward");
+    driveForwardUntilHit();
+    LCD.Write("Correcting");
+    correction(FRONT);
+    LCD.Write("Turning");
     turn(RIGHT);
 
-    driveUntilHit();
+    correction(BACK);
+
+ 
+
+    driveForwardUntilHit();
+
+    correction(FRONT);
+
     turn(LEFT);
 
-    driveUntilHit();
+    correction(BACK);
+
+ 
+
+    driveForwardUntilHit();
+
+    correction(FRONT);
+
 }
