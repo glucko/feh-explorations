@@ -4,11 +4,21 @@
 #include <FEHMotor.h>
 #include <FEHServo.h>
 #include <FEHAccel.h>
+#include <string>
+#include "FEHFile.h"
+#include "FEHSD.h"
 
-#define LEFT 1
-#define RIGHT -1
+#define LEFT_TURN 1
+#define RIGHT_TURN -1
 
-AnalogInputPin lightSensor(FEHIO::P0_0);
+#define FORWARD 25
+#define BACKWARD 25
+
+using namespace std;
+
+AnalogInputPin leftSensor(FEHIO::P0_0);
+AnalogInputPin middleSensor(FEHIO::P0_0);
+AnalogInputPin rightSensor(FEHIO::P0_0);
 
 DigitalInputPin frontRight(FEHIO::P1_0);
 DigitalInputPin backRight(FEHIO::P1_1);
@@ -18,22 +28,70 @@ DigitalInputPin backLeft(FEHIO::P1_3);
 FEHMotor leftMotor(FEHMotor::Motor0, 9);
 FEHMotor rightMotor(FEHMotor::Motor2, 9);
 
-#define forward 25
-#define backward -25
+enum LineStates { 
+    MIDDLE, 
+    RIGHT, 
+    LEFT
+   }; 
 
-// FEHServo servo(FEHServo::Servo0);
+void lineFollowing()
+{
+    int state = MIDDLE;
+    while (true) {
+        switch(state) { 
+
+        case MIDDLE:
+            leftMotor.SetPercent(FORWARD);
+            rightMotor.SetPercent(FORWARD);
+
+            if (rightSensor.Value() < 1.5) {
+                state = RIGHT;
+            } 
+
+            if (leftSensor.Value() < 1.5) {
+                state = LEFT;
+            }
+            break; 
+
+        case RIGHT:
+            leftMotor.SetPercent(FORWARD);
+            rightMotor.SetPercent(FORWARD + 5);
+            
+            // when right is no longer triggered
+            if(rightSensor.Value() > 1.5){ 
+                state = MIDDLE;
+            }
+            break; 
+
+        case LEFT:
+            leftMotor.SetPercent(FORWARD + 5);
+            rightMotor.SetPercent(FORWARD);
+            
+            // when left is no longer triggered
+            if(leftSensor.Value() > 1.5){ 
+                state = MIDDLE;
+            }
+            break; 
+
+        default:
+            break; 
+        }
+
+        Sleep(.1);
+    } 
+}
 
 void correction()
 {
     if(!backRight.Value() && backLeft.Value()){ //Right one has hit but left hasn't
         LCD.Write("Right one hit, left not");
-        leftMotor.SetPercent(backward);
+        leftMotor.SetPercent(BACKWARD);
         rightMotor.SetPercent(0);
     }
     if(backRight.Value() && !backLeft.Value()){ //Right one hasn't hit but left one has
         LCD.Write("Left one hit, right not");
         leftMotor.SetPercent(0);
-        rightMotor.SetPercent(backward);
+        rightMotor.SetPercent(BACKWARD);
     }
     while(backRight.Value() || backLeft.Value())
     {
@@ -45,12 +103,12 @@ void correction()
 
 void turn(int dir)
 {
-    if (dir == LEFT)
+    if (dir == LEFT_TURN)
     {
-        rightMotor.SetPercent(forward);
+        rightMotor.SetPercent(FORWARD);
         LCD.Write("Turning left");
     } else{
-        leftMotor.SetPercent(forward);
+        leftMotor.SetPercent(FORWARD);
         LCD.Write("Turning right");
     }
 
@@ -66,8 +124,8 @@ void turn(int dir)
 
 void driveUntilHit()
 {
-    leftMotor.SetPercent(forward);
-    rightMotor.SetPercent(forward);
+    leftMotor.SetPercent(FORWARD);
+    rightMotor.SetPercent(FORWARD);
 
     while(frontLeft.Value() || frontRight.Value()) {}
 
@@ -75,35 +133,32 @@ void driveUntilHit()
     rightMotor.SetPercent(0);
 }
 
-// void controlServo()
-// {
-//     double servoCoefficient = 180.0/3.3;
-//     servo.SetDegree(lightSensor.Value() * servoCoefficient);
-// }
-
-
-int main()
+void waitUntilTouch()
 {
-    // servo.SetMax(2500);
-    // servo.SetMin(500);
-
-    // while(true)
-    // {
-    //     controlServo();
-    // }
-
     float left;
     float right;
 
     while(!LCD.Touch(&left, &right)) {}
 
     while(LCD.Touch(&left, &right)) {}
+}
+
+void log(string message)
+{
+
+    FEHFile *ofptr = SD.FOpen("Output.txt", "w");
+
+    SD.FPrintf(ofptr, message.c_str());
+
+    SD.FClose(ofptr);
+}
+
+int main()
+{
+    waitUntilTouch();
     
-    driveUntilHit();
-    turn(RIGHT);
-
-    driveUntilHit();
-    turn(LEFT);
-
-    driveUntilHit();
+    while(true)
+    {
+        lineFollowing();
+    }
 }
