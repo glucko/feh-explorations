@@ -2,14 +2,9 @@
 #include <FEHIO.h>
 #include <FEHUtility.h>
 #include <FEHMotor.h>
-#include <FEHServo.h>
-#include <FEHAccel.h>
 #include <string>
 #include "FEHFile.h"
 #include "FEHSD.h"
-
-#define LEFT_TURN 1
-#define RIGHT_TURN -1
 
 #define FORWARD 25
 #define BACKWARD 25
@@ -17,13 +12,8 @@
 using namespace std;
 
 AnalogInputPin leftSensor(FEHIO::P0_0);
-AnalogInputPin middleSensor(FEHIO::P0_0);
-AnalogInputPin rightSensor(FEHIO::P0_0);
-
-DigitalInputPin frontRight(FEHIO::P1_0);
-DigitalInputPin backRight(FEHIO::P1_1);
-DigitalInputPin frontLeft(FEHIO::P1_2);
-DigitalInputPin backLeft(FEHIO::P1_3);
+AnalogInputPin middleSensor(FEHIO::P0_1);
+AnalogInputPin rightSensor(FEHIO::P0_2);
 
 FEHMotor leftMotor(FEHMotor::Motor0, 9);
 FEHMotor rightMotor(FEHMotor::Motor2, 9);
@@ -76,61 +66,7 @@ void lineFollowing()
         default:
             break; 
         }
-
-        Sleep(.1);
     } 
-}
-
-void correction()
-{
-    if(!backRight.Value() && backLeft.Value()){ //Right one has hit but left hasn't
-        LCD.Write("Right one hit, left not");
-        leftMotor.SetPercent(BACKWARD);
-        rightMotor.SetPercent(0);
-    }
-    if(backRight.Value() && !backLeft.Value()){ //Right one hasn't hit but left one has
-        LCD.Write("Left one hit, right not");
-        leftMotor.SetPercent(0);
-        rightMotor.SetPercent(BACKWARD);
-    }
-    while(backRight.Value() || backLeft.Value())
-    {
-        //Looping while at least one switch isn't clicked
-    }
-    leftMotor.SetPercent(0);
-    rightMotor.SetPercent(0);
-}
-
-void turn(int dir)
-{
-    if (dir == LEFT_TURN)
-    {
-        rightMotor.SetPercent(FORWARD);
-        LCD.Write("Turning left");
-    } else{
-        leftMotor.SetPercent(FORWARD);
-        LCD.Write("Turning right");
-    }
-
-    while(!backRight.Value() || !backLeft.Value()) {
-        //Loops until a bump switch is hit
-    }
-
-    leftMotor.SetPercent(0);
-    rightMotor.SetPercent(0);
-
-    correction();
-}
-
-void driveUntilHit()
-{
-    leftMotor.SetPercent(FORWARD);
-    rightMotor.SetPercent(FORWARD);
-
-    while(frontLeft.Value() || frontRight.Value()) {}
-
-    leftMotor.SetPercent(0);
-    rightMotor.SetPercent(0);
 }
 
 void waitUntilTouch()
@@ -160,5 +96,6 @@ int main()
     while(true)
     {
         lineFollowing();
+        Sleep(.1);
     }
 }
