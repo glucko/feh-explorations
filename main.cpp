@@ -43,10 +43,14 @@ void travel(int distance) {
 
     stopMotors();
 
-    LCD.Clear();
+    // LCD.Clear();
 
-    LCD.WriteLine("Left Encoder count: " + leftEncoder.Counts());
-    LCD.WriteLine("Right Encoder count: " + rightEncoder.Counts());
+    // string line1 = "Left Encoder count: " + to_string(leftEncoder.Counts());
+    // string line2 = "Right Encoder count: " + to_string(rightEncoder.Counts());
+
+    // LCD.WriteLine(line1.c_str());
+    // LCD.WriteLine(line2.c_str());
+
 
     leftEncoder.ResetCounts();
     rightEncoder.ResetCounts();
@@ -55,8 +59,8 @@ void travel(int distance) {
 void turn(int direction){
     int counts = (leftEncoder.Counts()+rightEncoder.Counts())/2;
     if(direction == TURN_RIGHT){
-        leftMotor.SetPercent(BACKWARD);
-        rightMotor.SetPercent(FORWARD);
+        leftMotor.SetPercent(FORWARD);
+        rightMotor.SetPercent(BACKWARD);
     } else{
         leftMotor.SetPercent(BACKWARD);
         rightMotor.SetPercent(FORWARD);
@@ -83,10 +87,11 @@ void waitUntilTouch()
 
 int main()
 {
-    while(true)
-    {
-        waitUntilTouch();
-        travel(6);
+    waitUntilTouch();
 
-    }
+    travel(14);
+    turn(TURN_LEFT);
+    travel(10);
+    turn(TURN_RIGHT);
+    travel(4);
 }
