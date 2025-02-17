@@ -11,12 +11,12 @@
 
 using namespace std;
 
-AnalogInputPin leftSensor(FEHIO::P0_0);
-AnalogInputPin middleSensor(FEHIO::P0_1);
-AnalogInputPin rightSensor(FEHIO::P0_2);
+AnalogInputPin leftOpt(FEHIO::P1_2);
+AnalogInputPin middleOpt(FEHIO::P1_1);
+AnalogInputPin rightOpt(FEHIO::P1_0);
 
-FEHMotor leftMotor(FEHMotor::Motor0, 9);
-FEHMotor rightMotor(FEHMotor::Motor2, 9);
+FEHMotor leftMotor(FEHMotor::Motor1, 9);
+FEHMotor rightMotor(FEHMotor::Motor0, 9);
 
 enum LineStates { 
     MIDDLE, 
@@ -34,21 +34,31 @@ void lineFollowing()
             leftMotor.SetPercent(FORWARD);
             rightMotor.SetPercent(FORWARD);
 
-            if (rightSensor.Value() < SENSOR_THRESHOLD) {
-                state = RIGHT;
-            } 
-
-            if (leftSensor.Value() < SENSOR_THRESHOLD) {
-                state = LEFT;
+            // if middle is off line, switch based on what sensor is on line
+            if (middleOpt.Value() > SENSOR_THRESHOLD)
+            {
+                if (rightOpt.Value() < SENSOR_THRESHOLD) {
+                    state = RIGHT;
+                } 
+    
+                if (leftOpt.Value() < SENSOR_THRESHOLD) {
+                    state = LEFT;
+                }
             }
+            // else 
+            // {
+
+            // }
+
+            // do code when middle and left/right are triggered
             break; 
 
         case RIGHT:
             leftMotor.SetPercent(FORWARD);
             rightMotor.SetPercent(FORWARD + TURN_ADJUSTMENT);
             
-            // when right is no longer triggered
-            if(rightSensor.Value() > SENSOR_THRESHOLD){ 
+            // stop when middle is on line
+            if(middleOpt.Value() < SENSOR_THRESHOLD){ 
                 state = MIDDLE;
             }
             break; 
@@ -57,8 +67,8 @@ void lineFollowing()
             leftMotor.SetPercent(FORWARD + TURN_ADJUSTMENT);
             rightMotor.SetPercent(FORWARD);
             
-            // when left is no longer triggered
-            if(leftSensor.Value() > SENSOR_THRESHOLD){ 
+            // stop when middle is on line
+            if(leftOpt.Value() < SENSOR_THRESHOLD){ 
                 state = MIDDLE;
             }
             break; 
@@ -95,7 +105,16 @@ int main()
     
     while(true)
     {
-        lineFollowing();
-        Sleep(.1);
+        string leftVal = "Left value: " + to_string(leftOpt.Value());
+        string middleVal =  "Middle Value: " + to_string(middleOpt.Value()); 
+        string rightVal =  "Right Value: " + to_string(rightOpt.Value());
+
+        LCD.WriteLine(leftVal.c_str());
+        LCD.WriteLine(middleVal.c_str());
+        LCD.WriteLine(rightVal.c_str());
+        // lineFollowing();
+        Sleep(5.0);
+
+        LCD.Clear();
     }
 }
