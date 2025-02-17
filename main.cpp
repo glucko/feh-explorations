@@ -1,295 +1,145 @@
 #include <FEHLCD.h>
-
 #include <FEHIO.h>
-
 #include <FEHUtility.h>
-
 #include <FEHMotor.h>
+#include <string>
+#include "FEHFile.h"
+#include "FEHSD.h"
+#include "math.h"
 
-#include <FEHServo.h>
+#define FORWARD 25
+#define BACKWARD -25
 
-#include <FEHAccel.h>
+#define SENSOR_THRESHOLD 1.5
+#define TURN_ADJUSTMENT 5
 
- 
+#define CIRCUMFERENCE M_PI*2.5
+#define TURN_DISTANCE 5.89048623
 
-#define FRONT 0
+using namespace std;
 
-#define RIGHT 1
+AnalogInputPin leftSensor(FEHIO::P0_0);
+AnalogInputPin middleSensor(FEHIO::P0_1);
+AnalogInputPin rightSensor(FEHIO::P0_2);
 
-#define BACK 2
+FEHMotor leftMotor(FEHMotor::Motor1, 9);
+FEHMotor rightMotor(FEHMotor::Motor0, 9);
 
-#define LEFT 3
+DigitalEncoder leftEncoder(FEHIO::P0_0);
+DigitalEncoder rightEncoder(FEHIO::P0_1);
 
- 
+enum LineStates { 
+    MIDDLE, 
+    RIGHT, 
+    LEFT
+   }; 
 
-//AnalogInputPin lightSensor(FEHIO::P0:0);
+enum move {
+    TURN_RIGHT,
+    TURN_LEFT
+};
 
- 
+void travel(int distance) {
+    int counts = (leftEncoder.Counts()+rightEncoder.Counts())/2;
+    leftMotor.SetPercent(FORWARD);
+    rightMotor.SetPercent(FORWARD);
 
-DigitalInputPin frontRight(FEHIO::P1_1);
-
-DigitalInputPin backRight(FEHIO::P1_0);
-
-DigitalInputPin frontLeft(FEHIO::P1_2);
-
-DigitalInputPin backLeft(FEHIO::P3_0);
-
- 
-
-FEHMotor leftMotor(FEHMotor::Motor0, 9);
-
-FEHMotor rightMotor(FEHMotor::Motor2, 9);
-
- 
-
-#define forward 25
-
-#define backward -25
-
- 
-
-// FEHServo servo(FEHServo::Servo0);
-
- 
-
-//Assumes that person is inputting either LEFT or RIGHT
-
-void turn(int dir)
-
-{
-
-    if(dir == LEFT)
-
-    {
-
-        leftMotor.SetPercent(backward);
-
+    while(CIRCUMFERENCE*counts/318 < distance) {
+        counts = (leftEncoder.Counts()+rightEncoder.Counts())/2;
     }
-
-    else
-
-    {
-
-        rightMotor.SetPercent(backward);
-
-    }
-
-    while(backRight.Value() && backLeft.Value()) //While neither has been hit
-
-    {
-
-        Sleep(0.1);
-
-    }
-
-    leftMotor.SetPercent(0);
-
-    rightMotor.SetPercent(0);
-
+    leftEncoder.ResetCounts();
 }
 
- 
-
-bool hitSideWithOne(int dir)
-
-{
-
-    if(dir == FRONT)
-
-    {
-
-        return !(frontRight.Value() && frontLeft.Value()); //Returns 1 if either is hit
-
+void turn(int direction){
+    int counts = (leftEncoder.Counts()+rightEncoder.Counts())/2;
+    if(direction == TURN_RIGHT){
+        leftMotor.SetPercent(BACKWARD);
+        rightMotor.SetPercent(FORWARD);
+    } else{
+        leftMotor.SetPercent(BACKWARD);
+        rightMotor.SetPercent(FORWARD);
     }
 
-    else
-
-    {
-
-        return !(backRight.Value() && backLeft.Value()); //Returns 1 if either is hit
-
+    while(CIRCUMFERENCE*counts/318 < TURN_DISTANCE) {
+        counts = (leftEncoder.Counts()+rightEncoder.Counts())/2;
     }
 
+    leftEncoder.ResetCounts();
 }
 
- 
-
-bool flushWithWall(int dir)
-
+void lineFollowing()
 {
+    int state = MIDDLE;
+    while (true) {
+        switch(state) { 
 
-    if(dir == FRONT)
+        case MIDDLE:
+            leftMotor.SetPercent(FORWARD);
+            rightMotor.SetPercent(FORWARD);
 
-    {
+            if (rightSensor.Value() < SENSOR_THRESHOLD) {
+                state = RIGHT;
+            } 
 
-        return !(frontRight.Value() || frontLeft.Value()); //Returns 1 if both are hit
+            if (leftSensor.Value() < SENSOR_THRESHOLD) {
+                state = LEFT;
+            }
+            break; 
 
-    }
+        case RIGHT:
+            leftMotor.SetPercent(FORWARD);
+            rightMotor.SetPercent(FORWARD + TURN_ADJUSTMENT);
+            
+            // when right is no longer triggered
+            if(rightSensor.Value() > SENSOR_THRESHOLD){ 
+                state = MIDDLE;
+            }
+            break; 
 
-    else
+        case LEFT:
+            leftMotor.SetPercent(FORWARD + TURN_ADJUSTMENT);
+            rightMotor.SetPercent(FORWARD);
+            
+            // when left is no longer triggered
+            if(leftSensor.Value() > SENSOR_THRESHOLD){ 
+                state = MIDDLE;
+            }
+            break; 
 
-    {
-
-        return !(backRight.Value() || backLeft.Value()); //Returns 1 if both are hit
-
-    }
-
-}
-
- 
-
-void correction(int dir)
-
-{
-
-    if(dir == FRONT)
-
-    {
-
-        if(frontRight.Value()) //Front right is not touching wall
-
-        {
-
-            rightMotor.SetPercent(forward);
-
+        default:
+            break; 
         }
-
-        else //Front left is not touching wall
-
-        {
-
-            leftMotor.SetPercent(forward);
-
-        }
-
-    }
-
-    else
-
-    {
-
-        if(backRight.Value()) //Back right is not touching wall
-
-        {
-
-            rightMotor.SetPercent(backward);
-
-        }
-
-        else //Back left is not touching wall
-
-        {
-
-            leftMotor.SetPercent(backward);
-
-        }
-
-    }
-
-    while(!flushWithWall(dir))
-
-    {
-
-        Sleep(0.1);
-
-    }
-
+    } 
 }
 
- 
-
-void driveForwardUntilHit()
-
+void waitUntilTouch()
 {
-
-    leftMotor.SetPercent(forward);
-
-    rightMotor.SetPercent(forward);
-
-    while(!hitSideWithOne(FRONT))
-
-    {
-
-        Sleep(0.1);
-
-    }
-
-    leftMotor.SetPercent(0);
-
-    rightMotor.SetPercent(0);
-
-}
-
- 
-
-// void controlServo()
-
-// {
-
-//     double servoCoefficient = 180.0/3.3;
-
-//     servo.SetDegree(lightSensor.Value() * servoCoefficient);
-
-// }
-
- 
-
-int main()
-
-{
-
-    // servo.SetMax(2500);
-
-    // servo.SetMin(500);
-
- 
-
-    // while(true)
-
-    // {
-
-    //     controlServo();
-
-    // }
-
- 
-
     float left;
-
     float right;
-
- 
 
     while(!LCD.Touch(&left, &right)) {}
 
- 
-
     while(LCD.Touch(&left, &right)) {}
+}
 
-   
-    LCD.Write("Driving Forward");
-    driveForwardUntilHit();
-    LCD.Write("Correcting");
-    correction(FRONT);
-    LCD.Write("Turning");
-    turn(RIGHT);
+void log(string message)
+{
 
-    correction(BACK);
+    FEHFile *ofptr = SD.FOpen("Output.txt", "w");
 
- 
+    SD.FPrintf(ofptr, message.c_str());
 
-    driveForwardUntilHit();
+    SD.FClose(ofptr);
+}
 
-    correction(FRONT);
-
-    turn(LEFT);
-
-    correction(BACK);
-
- 
-
-    driveForwardUntilHit();
-
-    correction(FRONT);
-
+int main()
+{
+    waitUntilTouch();
+    
+    while(true)
+    {
+        //lineFollowing();
+        travel(6);
+        Sleep(.1);
+    }
 }
