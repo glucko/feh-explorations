@@ -3,15 +3,11 @@
 #include <FEHUtility.h>
 #include <FEHMotor.h>
 #include <string>
-#include "FEHFile.h"
 #include "FEHSD.h"
 #include "math.h"
 
 #define FORWARD 25
 #define BACKWARD -25
-
-#define SENSOR_THRESHOLD 1.5
-#define TURN_ADJUSTMENT 5
 
 #define CIRCUMFERENCE M_PI*2.5
 #define TURN_DISTANCE 5.89048623
@@ -30,6 +26,12 @@ enum move {
     TURN_LEFT
 };
 
+void stopMotors()
+{
+    leftMotor.SetPercent(0);
+    rightMotor.SetPercent(0);
+}
+
 void travel(int distance) {
     int counts = (leftEncoder.Counts()+rightEncoder.Counts())/2;
     leftMotor.SetPercent(FORWARD);
@@ -38,7 +40,16 @@ void travel(int distance) {
     while(CIRCUMFERENCE*counts/318 < distance) {
         counts = (leftEncoder.Counts()+rightEncoder.Counts())/2;
     }
+
+    stopMotors();
+
+    LCD.Clear();
+
+    LCD.WriteLine("Left Encoder count: " + leftEncoder.Counts());
+    LCD.WriteLine("Right Encoder count: " + rightEncoder.Counts());
+
     leftEncoder.ResetCounts();
+    rightEncoder.ResetCounts();
 }
 
 void turn(int direction){
@@ -56,8 +67,8 @@ void turn(int direction){
     }
 
     leftEncoder.ResetCounts();
+    rightEncoder.ResetCounts();
 }
-
 
 void waitUntilTouch()
 {
@@ -72,12 +83,10 @@ void waitUntilTouch()
 
 int main()
 {
-    waitUntilTouch();
-    
     while(true)
     {
-        //lineFollowing();
+        waitUntilTouch();
         travel(6);
-        Sleep(.1);
+
     }
 }
