@@ -18,21 +18,12 @@
 
 using namespace std;
 
-AnalogInputPin leftSensor(FEHIO::P0_0);
-AnalogInputPin middleSensor(FEHIO::P0_1);
-AnalogInputPin rightSensor(FEHIO::P0_2);
-
 FEHMotor leftMotor(FEHMotor::Motor1, 9);
 FEHMotor rightMotor(FEHMotor::Motor0, 9);
 
 DigitalEncoder leftEncoder(FEHIO::P0_0);
 DigitalEncoder rightEncoder(FEHIO::P0_1);
-
-enum LineStates { 
-    MIDDLE, 
-    RIGHT, 
-    LEFT
-   }; 
+; 
 
 enum move {
     TURN_RIGHT,
@@ -67,50 +58,6 @@ void turn(int direction){
     leftEncoder.ResetCounts();
 }
 
-void lineFollowing()
-{
-    int state = MIDDLE;
-    while (true) {
-        switch(state) { 
-
-        case MIDDLE:
-            leftMotor.SetPercent(FORWARD);
-            rightMotor.SetPercent(FORWARD);
-
-            if (rightSensor.Value() < SENSOR_THRESHOLD) {
-                state = RIGHT;
-            } 
-
-            if (leftSensor.Value() < SENSOR_THRESHOLD) {
-                state = LEFT;
-            }
-            break; 
-
-        case RIGHT:
-            leftMotor.SetPercent(FORWARD);
-            rightMotor.SetPercent(FORWARD + TURN_ADJUSTMENT);
-            
-            // when right is no longer triggered
-            if(rightSensor.Value() > SENSOR_THRESHOLD){ 
-                state = MIDDLE;
-            }
-            break; 
-
-        case LEFT:
-            leftMotor.SetPercent(FORWARD + TURN_ADJUSTMENT);
-            rightMotor.SetPercent(FORWARD);
-            
-            // when left is no longer triggered
-            if(leftSensor.Value() > SENSOR_THRESHOLD){ 
-                state = MIDDLE;
-            }
-            break; 
-
-        default:
-            break; 
-        }
-    } 
-}
 
 void waitUntilTouch()
 {
@@ -122,15 +69,6 @@ void waitUntilTouch()
     while(LCD.Touch(&left, &right)) {}
 }
 
-void log(string message)
-{
-
-    FEHFile *ofptr = SD.FOpen("Output.txt", "w");
-
-    SD.FPrintf(ofptr, message.c_str());
-
-    SD.FClose(ofptr);
-}
 
 int main()
 {
