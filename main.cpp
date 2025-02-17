@@ -3,10 +3,11 @@
 #include <FEHUtility.h>
 #include <FEHMotor.h>
 #include <string>
-#define FORWARD 25
-#define BACKWARD 25
+#define FORWARD 10
+#define BACKWARD 10
 
-#define SENSOR_THRESHOLD 1.5
+#define ON_LINE_THRESHOLD 2
+#define OFF_LINE_THRESHOLD 1.2
 #define TURN_ADJUSTMENT 5
 
 using namespace std;
@@ -28,54 +29,58 @@ void lineFollowing()
 {
     int state = MIDDLE;
     while (true) {
-        switch(state) { 
+        LCD.WriteLine(state);
+
+        switch(state) {
 
         case MIDDLE:
             leftMotor.SetPercent(FORWARD);
             rightMotor.SetPercent(FORWARD);
 
             // if middle is off line, switch based on what sensor is on line
-            if (middleOpt.Value() > SENSOR_THRESHOLD)
+            if (middleOpt.Value() < OFF_LINE_THRESHOLD)
             {
-                if (rightOpt.Value() < SENSOR_THRESHOLD) {
+                if (rightOpt.Value() > ON_LINE_THRESHOLD) {
                     state = RIGHT;
                 } 
     
-                if (leftOpt.Value() < SENSOR_THRESHOLD) {
+                if (leftOpt.Value() > ON_LINE_THRESHOLD) {
                     state = LEFT;
                 }
             }
+            // do code when middle and left/right are triggered
             // else 
             // {
 
             // }
 
-            // do code when middle and left/right are triggered
             break; 
 
         case RIGHT:
-            leftMotor.SetPercent(FORWARD);
-            rightMotor.SetPercent(FORWARD + TURN_ADJUSTMENT);
+            leftMotor.SetPercent(FORWARD + TURN_ADJUSTMENT);
+            rightMotor.SetPercent(FORWARD);
             
             // stop when middle is on line
-            if(middleOpt.Value() < SENSOR_THRESHOLD){ 
+            if(middleOpt.Value() > ON_LINE_THRESHOLD){ 
                 state = MIDDLE;
             }
             break; 
 
         case LEFT:
-            leftMotor.SetPercent(FORWARD + TURN_ADJUSTMENT);
-            rightMotor.SetPercent(FORWARD);
+            leftMotor.SetPercent(FORWARD);
+            rightMotor.SetPercent(FORWARD + TURN_ADJUSTMENT);
             
             // stop when middle is on line
-            if(leftOpt.Value() < SENSOR_THRESHOLD){ 
+            if(middleOpt.Value() > ON_LINE_THRESHOLD){ 
                 state = MIDDLE;
             }
             break; 
 
         default:
             break; 
+        
         }
+        Sleep(.1);
     } 
 }
 
@@ -103,18 +108,21 @@ int main()
 {
     waitUntilTouch();
     
-    while(true)
-    {
-        string leftVal = "Left value: " + to_string(leftOpt.Value());
-        string middleVal =  "Middle Value: " + to_string(middleOpt.Value()); 
-        string rightVal =  "Right Value: " + to_string(rightOpt.Value());
+    lineFollowing();
+    // while(true)
+    // {
+    //     string leftVal = "Left value: " + to_string(leftOpt.Value());
+    //     string middleVal =  "Middle Value: " + to_string(middleOpt.Value()); 
+    //     string rightVal =  "Right Value: " + to_string(rightOpt.Value());
 
-        LCD.WriteLine(leftVal.c_str());
-        LCD.WriteLine(middleVal.c_str());
-        LCD.WriteLine(rightVal.c_str());
-        // lineFollowing();
-        Sleep(5.0);
+    //     LCD.WriteLine(leftVal.c_str());
+    //     LCD.WriteLine(middleVal.c_str());
+    //     LCD.WriteLine(rightVal.c_str());
 
-        LCD.Clear();
-    }
+    //     lineFollowing();
+
+    //     Sleep(.5);
+
+    //     LCD.Clear();
+    // }
 }
