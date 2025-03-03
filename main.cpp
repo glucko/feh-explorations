@@ -23,7 +23,7 @@ FEHMotor rightMotor(FEHMotor::Motor1, 9);
 DigitalEncoder leftEncoder(FEHIO::P0_0);
 DigitalEncoder rightEncoder(FEHIO::P0_1);
 
-DigitalInputPin distanceSensor(FEHIO::P1_1);
+DigitalInputPin distanceSensor(FEHIO::P1_0);
 
 // rcs string: 1240E4ZQS
 enum move
@@ -38,22 +38,49 @@ void stopMotors()
     rightMotor.SetPercent(0);
 }
 
-void driveUntilWall(int power)
+void driveUntilWall(int power, bool wallDetected)
 {
     leftMotor.SetPercent(power);
     rightMotor.SetPercent(power * RIGHT_MULTIPLIER);
 
-    while (!distanceSensor.Value())
+    // if waiting until wall detected, wait until distance sensor is false
+    if (wallDetected)
     {
+        while (distanceSensor.Value())
+        {
+            LCD.WriteLine(distanceSensor.Value());
+        }
     }
+    else
+    {
+        // else, wait until no wall is detected
+        while (!distanceSensor.Value())
+        {
+            LCD.WriteLine(distanceSensor.Value());
+        }
+    }
+
     stopMotors();
 }
 
 void driveDistance(int distance)
 {
+    leftEncoder.ResetCounts();
+    rightEncoder.ResetCounts();
+
     int counts = (leftEncoder.Counts() + rightEncoder.Counts()) / 2;
-    leftMotor.SetPercent(FORWARD);
-    rightMotor.SetPercent(FORWARD * RIGHT_MULTIPLIER);
+
+    if (distance > 0)
+    {
+        leftMotor.SetPercent(FORWARD);
+        rightMotor.SetPercent(FORWARD * RIGHT_MULTIPLIER);
+    }
+    else
+    {
+        leftMotor.SetPercent(BACKWARD);
+        rightMotor.SetPercent(BACKWARD * RIGHT_MULTIPLIER);
+        distance *= -1;
+    }
 
     while (CIRCUMFERENCE * counts / 318 < distance)
     {
@@ -61,21 +88,13 @@ void driveDistance(int distance)
     }
 
     stopMotors();
-
-    // LCD.Clear();
-
-    // string line1 = "Left Encoder count: " + to_string(leftEncoder.Counts());
-    // string line2 = "Right Encoder count: " + to_string(rightEncoder.Counts());
-
-    // LCD.WriteLine(line1.c_str());
-    // LCD.WriteLine(line2.c_str());
-
-    leftEncoder.ResetCounts();
-    rightEncoder.ResetCounts();
 }
 
 void turn(int direction)
 {
+    leftEncoder.ResetCounts();
+    rightEncoder.ResetCounts();
+
     int counts = (leftEncoder.Counts() + rightEncoder.Counts()) / 2;
     if (direction == TURN_RIGHT)
     {
@@ -93,8 +112,7 @@ void turn(int direction)
         counts = (leftEncoder.Counts() + rightEncoder.Counts()) / 2;
     }
 
-    leftEncoder.ResetCounts();
-    rightEncoder.ResetCounts();
+    stopMotors();
 }
 
 void waitUntilTouch()
@@ -113,43 +131,39 @@ void waitUntilTouch()
 
 void maze()
 {
-    driveUntilWall(BACKWARD);
+    // part 1
+    driveUntilWall(BACKWARD, true);
+    driveDistance(1);
     turn(TURN_LEFT);
 
-    driveUntilWall(BACKWARD);
-    turn(TURN_LEFT);
+    LCD.WriteLine("Finished turn 1");
+    Sleep(.5);
 
-    driveUntilWall(BACKWARD);
+    // part 2
+    driveUntilWall(BACKWARD, true);
+    driveDistance(3);
+    turn(TURN_RIGHT);
+
+    LCD.WriteLine("Finished turn 2");
+    Sleep(.5);
+
+    // part 3
+    driveUntilWall(BACKWARD, true);
+
+    LCD.WriteLine("finished");
 }
 
-// void correctWall()
-// {
-//     // driveDistance(60 cm);
+void correctWall()
+{
+    driveDistance(-(60 / 2.54));
 
-//     // if no wall, drive until wall
-//     if (!distanceSensor.Value())
-//     {
-//         driveUntilWall(FORWARD);
-//     }
-//     else
-//     {
-//         // if wall, drive until no wall
+    LCD.WriteLine("finished driving distance");
 
-//         while (distanceSensor.Value())
-//         {
-//             d
-//         }
-//     }
-// }
+    driveUntilWall(25, distanceSensor.Value());
+}
 
 int main()
 {
-    RCS.InitializeTouchMenu("1240E4ZQS");
-
-    while (true)
-    {
-        LCD.WriteLine(distanceSensor.Value());
-
-        Sleep(.5);
-    }
+    waitUntilTouch();
+    correctWall();
 }
