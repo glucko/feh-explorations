@@ -10,17 +10,20 @@
 #define FORWARD 25
 #define BACKWARD -25
 
+#define RIGHT_MULTIPLIER -1
+
 #define CIRCUMFERENCE M_PI * 2.5
 #define TURN_DISTANCE 5.89048623
 
 using namespace std;
 
-FEHMotor leftMotor(FEHMotor::Motor1, 9);
-FEHMotor rightMotor(FEHMotor::Motor0, 9);
+FEHMotor leftMotor(FEHMotor::Motor0, 9);
+FEHMotor rightMotor(FEHMotor::Motor1, 9);
 
 DigitalEncoder leftEncoder(FEHIO::P0_0);
 DigitalEncoder rightEncoder(FEHIO::P0_1);
-;
+
+DigitalInputPin distanceSensor(FEHIO::P1_1);
 
 // rcs string: 1240E4ZQS
 enum move
@@ -35,11 +38,22 @@ void stopMotors()
     rightMotor.SetPercent(0);
 }
 
-void travel(int distance)
+void driveUntilWall(int power)
+{
+    leftMotor.SetPercent(power);
+    rightMotor.SetPercent(power * RIGHT_MULTIPLIER);
+
+    while (!distanceSensor.Value())
+    {
+    }
+    stopMotors();
+}
+
+void driveDistance(int distance)
 {
     int counts = (leftEncoder.Counts() + rightEncoder.Counts()) / 2;
     leftMotor.SetPercent(FORWARD);
-    rightMotor.SetPercent(FORWARD);
+    rightMotor.SetPercent(FORWARD * RIGHT_MULTIPLIER);
 
     while (CIRCUMFERENCE * counts / 318 < distance)
     {
@@ -66,12 +80,12 @@ void turn(int direction)
     if (direction == TURN_RIGHT)
     {
         leftMotor.SetPercent(FORWARD);
-        rightMotor.SetPercent(BACKWARD);
+        rightMotor.SetPercent(BACKWARD * RIGHT_MULTIPLIER);
     }
     else
     {
         leftMotor.SetPercent(BACKWARD);
-        rightMotor.SetPercent(FORWARD);
+        rightMotor.SetPercent(FORWARD * RIGHT_MULTIPLIER);
     }
 
     while (CIRCUMFERENCE * counts / 318 < TURN_DISTANCE)
@@ -97,7 +111,45 @@ void waitUntilTouch()
     }
 }
 
+void maze()
+{
+    driveUntilWall(BACKWARD);
+    turn(TURN_LEFT);
+
+    driveUntilWall(BACKWARD);
+    turn(TURN_LEFT);
+
+    driveUntilWall(BACKWARD);
+}
+
+// void correctWall()
+// {
+//     // driveDistance(60 cm);
+
+//     // if no wall, drive until wall
+//     if (!distanceSensor.Value())
+//     {
+//         driveUntilWall(FORWARD);
+//     }
+//     else
+//     {
+//         // if wall, drive until no wall
+
+//         while (distanceSensor.Value())
+//         {
+//             d
+//         }
+//     }
+// }
+
 int main()
 {
     RCS.InitializeTouchMenu("1240E4ZQS");
+
+    while (true)
+    {
+        LCD.WriteLine(distanceSensor.Value());
+
+        Sleep(.5);
+    }
 }
